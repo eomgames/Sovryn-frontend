@@ -13,6 +13,7 @@ stats.json
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+akash-deploy.yml
 
 .env
 .env.development.local
