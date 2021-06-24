@@ -1,31 +1,34 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
-import { translations } from 'locales/i18n';
-import moment from 'moment-timezone';
-import logoSvg from 'assets/images/tokens/sov.svg';
+import { Tooltip } from '@blueprintjs/core';
 import { bignumber } from 'mathjs';
-import { weiToNumberFormat } from 'utils/display-text/format';
-import { contractReader } from 'utils/sovryn/contract-reader';
-import { AssetsDictionary } from 'utils/dictionaries/assets-dictionary';
-import { ethGenesisAddress } from 'utils/classifiers';
-import { Modal } from '../../../components/Modal';
-import { Asset } from '../../../../types/asset';
-import { getContract } from 'utils/blockchain/contract-helpers';
-import { useAccount } from '../../../hooks/useAccount';
-import { weiToFixed } from 'utils/blockchain/math-helpers';
-import { numberToUSD } from 'utils/display-text/format';
-import { LoadableValue } from '../../../components/LoadableValue';
-import { AddressBadge } from '../../../components/AddressBadge';
-import { WithdrawVesting } from './WithdrawVesting';
-import { useCachedAssetPrice } from '../../../hooks/trading/useCachedAssetPrice';
-import { useStaking_balanceOf } from '../../../hooks/staking/useStaking_balanceOf';
-import { useStaking_getStakes } from '../../../hooks/staking/useStaking_getStakes';
-import { useStaking_getAccumulatedFees } from '../../../hooks/staking/useStaking_getAccumulatedFees';
+import moment from 'moment-timezone';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
+import { useMaintenance } from 'app/hooks/useMaintenance';
+import logoSvg from 'assets/images/tokens/sov.svg';
+import { translations } from 'locales/i18n';
+import { getContract } from 'utils/blockchain/contract-helpers';
+import { weiToFixed } from 'utils/blockchain/math-helpers';
 import {
   vesting_getEndDate,
   vesting_getStartDate,
 } from 'utils/blockchain/requests/vesting';
+import { ethGenesisAddress } from 'utils/classifiers';
+import { AssetsDictionary } from 'utils/dictionaries/assets-dictionary';
+import { weiToNumberFormat } from 'utils/display-text/format';
+import { numberToUSD } from 'utils/display-text/format';
+import { contractReader } from 'utils/sovryn/contract-reader';
+
+import { Asset } from '../../../../types/asset';
+import { AddressBadge } from '../../../components/AddressBadge';
+import { LoadableValue } from '../../../components/LoadableValue';
+import { Modal } from '../../../components/Modal';
+import { useStaking_balanceOf } from '../../../hooks/staking/useStaking_balanceOf';
+import { useStaking_getAccumulatedFees } from '../../../hooks/staking/useStaking_getAccumulatedFees';
+import { useStaking_getStakes } from '../../../hooks/staking/useStaking_getStakes';
+import { useCachedAssetPrice } from '../../../hooks/trading/useCachedAssetPrice';
+import { useAccount } from '../../../hooks/useAccount';
+import { WithdrawVesting } from './WithdrawVesting';
 
 interface Props {
   vestingAddress: string;
@@ -35,6 +38,12 @@ interface Props {
 
 export function VestingContract(props: Props) {
   const { t } = useTranslation();
+  const { checkMaintenances, States } = useMaintenance();
+  const {
+    [States.DELEGATE_VESTS]: delegateLocked,
+    [States.WITHDRAW_VESTS]: withdrawLocked,
+  } = checkMaintenances();
+
   const account = useAccount();
   const getStakes = useStaking_getStakes(props.vestingAddress);
   const lockedAmount = useStaking_balanceOf(props.vestingAddress);
@@ -207,7 +216,7 @@ export function VestingContract(props: Props) {
             <td className="tw-text-left tw-hidden lg:tw-table-cell tw-font-normal">
               <p className={`tw-m-0 ${!stakingPeriodStart && 'skeleton'}`}>
                 {moment
-                  .tz(new Date(parseInt(stakingPeriodStart) * 1e3), 'GMT')
+                  .tz(new Date(parseInt(unlockDate) * 1e3), 'GMT')
                   .format('DD/MM/YYYY - h:mm:ss a z')}
               </p>
             </td>
@@ -221,23 +230,57 @@ export function VestingContract(props: Props) {
             </td>
             <td className="md:tw-text-left tw-hidden md:tw-table-cell">
               <div className="tw-flex tw-flex-nowrap">
-                <button
-                  className="tw-text-gold tw-tracking-normal hover:tw-text-gold hover:tw-underline tw-mr-1 xl:tw-mr-4 tw-p-0 tw-font-normal tw-font-montserrat"
-                  onClick={() => props.onDelegate(Number(unlockDate))}
-                >
-                  {t(translations.stake.actions.delegate)}
-                </button>
-                <button
-                  type="button"
-                  className="tw-text-gold tw-tracking-normal hover:tw-text-gold hover:tw-underline tw-mr-1 xl:tw-mr-4 tw-p-0 tw-font-normal tw-font-montserrat"
-                  onClick={() => setShowWithdraw(true)}
-                  disabled={
-                    !props.vestingAddress ||
-                    props.vestingAddress === ethGenesisAddress
-                  }
-                >
-                  {t(translations.stake.actions.withdraw)}
-                </button>
+                {delegateLocked ? (
+                  <Tooltip
+                    position="bottom"
+                    hoverOpenDelay={0}
+                    hoverCloseDelay={0}
+                    interactionKind="hover"
+                    content={<>{t(translations.maintenance.delegateVests)}</>}
+                  >
+                    <button
+                      type="button"
+                      className="tw-text-gold tw-tracking-normal hover:tw-text-gold hover:tw-underline tw-mr-1 xl:tw-mr-4 tw-p-0 tw-font-normal tw-font-montserrat tw-bg-transparent hover:tw-bg-opacity-0 tw-opacity-50 tw-cursor-not-allowed hover:tw-bg-transparent"
+                    >
+                      {t(translations.stake.actions.delegate)}
+                    </button>
+                  </Tooltip>
+                ) : (
+                  <button
+                    className="tw-text-gold tw-tracking-normal hover:tw-text-gold hover:tw-underline tw-mr-1 xl:tw-mr-4 tw-p-0 tw-font-normal tw-font-montserrat"
+                    onClick={() => props.onDelegate(Number(unlockDate))}
+                  >
+                    {t(translations.stake.actions.delegate)}
+                  </button>
+                )}
+                {withdrawLocked ? (
+                  <Tooltip
+                    position="bottom"
+                    hoverOpenDelay={0}
+                    hoverCloseDelay={0}
+                    interactionKind="hover"
+                    content={<>{t(translations.maintenance.withdrawVests)}</>}
+                  >
+                    <button
+                      type="button"
+                      className="tw-text-gold tw-tracking-normal hover:tw-text-gold hover:tw-underline tw-mr-1 xl:tw-mr-4 tw-p-0 tw-font-normal tw-font-montserrat tw-bg-transparent hover:tw-bg-opacity-0 tw-opacity-50 tw-cursor-not-allowed hover:tw-bg-transparent"
+                    >
+                      {t(translations.stake.actions.withdraw)}
+                    </button>
+                  </Tooltip>
+                ) : (
+                  <button
+                    type="button"
+                    className="tw-text-gold tw-tracking-normal hover:tw-text-gold hover:tw-underline tw-mr-1 xl:tw-mr-4 tw-p-0 tw-font-normal tw-font-montserrat"
+                    onClick={() => setShowWithdraw(true)}
+                    disabled={
+                      !props.vestingAddress ||
+                      props.vestingAddress === ethGenesisAddress
+                    }
+                  >
+                    {t(translations.stake.actions.withdraw)}
+                  </button>
+                )}
               </div>
             </td>
           </tr>

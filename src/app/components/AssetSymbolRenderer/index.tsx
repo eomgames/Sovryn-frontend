@@ -19,13 +19,18 @@ const symbolMap = {
       ETH<em>S</em>
     </>
   ),
+  [Asset.BNB]: (
+    <>
+      BNB<em>S</em>
+    </>
+  ),
 };
 
 export function getAssetSymbol(asset: Asset) {
   if (symbolMap.hasOwnProperty(asset)) {
     return symbolMap[asset];
   }
-  return AssetsDictionary.get(asset).symbol;
+  return AssetsDictionary.get(asset)?.symbol || asset;
 }
 
 interface IAssetSymbolRenderer {
