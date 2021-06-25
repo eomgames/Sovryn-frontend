@@ -13,7 +13,7 @@ jobs:
         name: Checkout
         uses: actions/checkout@v2
         with:
-          token: ${{ secrets.CI_USER_TOKEN }}
+          token: ${{ secrets.GA_TOKEN }}
       -
         name: Set up QEMU
         uses: docker/setup-qemu-action@v1
