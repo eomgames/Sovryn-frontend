@@ -14,6 +14,8 @@ jobs:
       -
         name: Checkout
         uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.GA_TOKEN }}
       -
         name: Set up QEMU
         uses: docker/setup-qemu-action@v1
@@ -27,14 +29,10 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       -
-        name: Get short sha
-        id: vars
-        run: echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
-      -
         name: Build and push
         uses: docker/build-push-action@v2
         with:
           context: .
           build-args: ci_user_token=${{secrets.GA_TOKEN}}
           push: true
-          tags: gambitcajun/sovryn-frontend:latest,gambitcajun/sovryn-frontend:${{ steps.vars.outputs.sha_short }}
+          tags: gambitcajun/sovryn-frontend:latest
