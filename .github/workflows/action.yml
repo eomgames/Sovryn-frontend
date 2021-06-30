@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - 'feat/add-docker-and-tor-support'
+  repository_dispatch:
+    types: build-sovryntor
 
 jobs:
   docker:
