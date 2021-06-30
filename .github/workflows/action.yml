@@ -25,3 +25,8 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
           buildArgs: ci_user_token=${{secrets.GA_TOKEN}}
           addLatest: true
+      - name: installing toolset
+        run: sudo apt install curl
+      - name: trigger sovryntor akash deployment
+        run: |-
+          curl -H "Accept: application/vnd.github.everest-preview+json" -H "Authorization: token {{ secret.TRIGGER_SOVTOR_DEP }}" --request POST --data '{"event_type": "deploy-sovryntor"}' https://api.github.com/repos/neo-dr/e2e-production/dispatches
